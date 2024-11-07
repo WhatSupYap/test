@@ -1,0 +1,125 @@
+﻿<!DOCTYPE html>
+
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>WipPersonMail</title>
+	<style>
+		@font-face {
+			font-family: 'Calibri Light';
+			src: url('https://join.deloitte.co.kr/WiseRecruit2/Common/font/calibril_1-webfont.woff2') format('woff2'), url('https://join.deloitte.co.kr/WiseRecruit2/Common/font/calibril_1-webfont.woff') format('woff');
+			font-weight: normal;
+			font-style: normal;
+			unicode-range: U+0041-005A, U+0061-007A;
+		}
+
+		@font-face {
+			font-family: '나눔바른고딕 Light';
+			src: url('https://join.deloitte.co.kr/WiseRecruit2/Common/font/nanumbarungothiclight-webfont.woff2') format('woff2'), url('https://join.deloitte.co.kr/WiseRecruit2/Common/font/nanumbarungothiclight-webfont.woff') format('woff');
+			font-weight: normal;
+			font-style: normal;
+			unicode-range: U+AC00-D7A3;
+		}
+
+		.f1 {
+			font-family: '나눔바른고딕 Light', 'Calibri';
+			mso-hansi-font-family: '나눔바른고딕 Light', 'Calibri';
+			mso-ascii-font-family: '나눔바른고딕 Light', 'Calibri';
+			/*            font-family: &quot;나눔바른고딕 Light&quot;,&quot;NanumBarunGothic Light&quot;,&quot;Calibri Light&quot;;*/
+		}
+
+		.EN {
+			font-family: 'Calibri';
+		}
+	</style>
+</head>
+<body style="font-family: 'MalgunGothic','Serif';">
+	<div id="divContent">
+		<table class="f1" style="width: 100%;">
+			<tbody>
+				<tr>
+					<td align="center" style="height: 58px; background-color: rgb(0, 0, 0);">
+						<table style="width: 750px; height: 58px;">
+							<tbody>
+								<tr>
+									<td><img width="151" height="28" alt="" src="https://join.deloitte.co.kr/DeloitteWeb/Images/Mail/logo.png" border="0"></td>
+									<td style="text-align:right;padding-top: 10px;padding-bottom: 10px;"><img width="72" height="63" alt="" src="https://join.deloitte.co.kr/DeloitteWeb/Images/Mail/heritage_seal.png" border="0"></td>
+								</tr>
+							</tbody>
+						</table>
+					</td>
+				</tr>
+				<tr style="background-color: rgb(242, 242, 242);">
+					<td align="center">
+						<table style="width: 575px; background-color: rgb(242, 242, 242);" border=0 cellspacing="0" cellpadding="5">
+							<tbody>
+								<tr>
+									<td style="height: 25px; color: rgb(127, 127, 127); padding-left: 13px; font-size: 8pt;" class="EN">Korea | CFO Office | {ISSUE_DATE}</td>
+								</tr>
+								<tr>
+									<td>
+										<table style="width: 100%;" cellspacing="2">
+											<tbody>
+												<tr>
+													<td align="center" style="background-color: rgb(255, 255, 255);"><img width="500" height="200" alt="" src="https://join.deloitte.co.kr/DeloitteWeb/Images/Mail/interlock_mail_0001.jpg" border="0"></td>
+												</tr>
+												<tr>
+													<td style="height: 85px; background-color: rgb(255, 255, 255);">
+														<div class="f1" style="font-size: 19pt; margin-left: 30px; color: green;"><strong class="EN">Expense Budget Report ({KEY_MONTH})</strong></div>
+													</td>
+												</tr>
+												<tr>
+													<td style="height: 10px;"></td>
+												</tr>
+												<tr>
+													<td style="font-size: 11pt; border-top-color: rgb(134, 188, 37); border-top-width: 4px; border-top-style: solid; background-color: rgb(255, 255, 255);">
+														<div class="f1" style="margin: 30px; font-size: 11pt;">
+															안녕하십니까,
+															<br>{PTN_NM} 파트너님의 {KEY_MONTH}월말 <span class="EN">Partner Expense</span> 현황은 아래와 같습니다.
+														</div>
+														<div class="f1" style="width:100%; margin-left: 20px; margin-right: 20px; color: #676a6c;  font-size: 11pt;">
+															<h4 class="f1" style="margin-top: 10px; margin-bottom: 3px;  font-size: 11pt;"></h4>
+															<table class="f1" style="width: 470px;  font-size: 11pt; " cellspacing="0" border="1">
+																<tr>
+																	<th style="background-color: #f5f5f5; width: 170px;" class="EN">YTD</th>
+																	<td style="text-align: center; width: 100px; " class="EN">Plan</td>
+																	<td style="text-align: center; width: 100px; " class="EN">Actual</td>
+																	<td style="text-align: center; width: 100px; font-size: 10pt;">잔여금액</td>
+																	<td style="text-align: center; width: 100px; font-size: 10pt;">사용률</td>
+																</tr>
+																{TR}
+															</table>
+														</div>
+														<div class="f1" style="margin: 30px; font-size: 11pt;">
+															{KEY_MONTH}월말 기준, 예산 대비 누적 사용률이 70%를 초과하였습니다.<br />
+															예산 내에서 비용집행이 이루어질 수 있도록, 각별한 관리 부탁 드립니다.<br />
+															아래 링크에서 그룹별, 파트너별 상세 내역을 확인하실 수 있습니다.<br />
+															<a href="{URI}/Sap_PartnerExpenseReport/ExpenseBudgetReport" class="EN">Link : ExpenseBudgetReport</a>
+														</div>
+														<div class="f1" style="width:100%; margin-left: 20px; margin-right: 20px; color: #676a6c; font-size: 11pt;">&nbsp;</div>
+													</td>
+												</tr>
+												<tr>
+													<td style="background-color: rgb(255, 255, 255);">
+														<div style="margin: 30px; color: rgb(127, 127, 127); font-size: 7pt;" class="EN">
+															Deloitte refers to one or more of Deloitte Touche Tohmatsu Limited, a UK private company limited by guarantee (“DTTL”), its network of member firms, and their related entities. DTTL and each of its member firms are legally separate and independent entities. DTTL (also referred to as “Deloitte Global”) does not provide services to clients. Please see <a style="color: rgb(5, 99, 193);" href="http://www.deloitte.com/kr/about">www.deloitte.com/kr/about</a> for a more detailed description of DTTL and its member firms.
+															<br><br>Deloitte provides audit, consulting, financial advisory, risk management, tax and related services to public and private clients spanning multiple industries. Deloitte serves four out of five Fortune Global 500® companies through a globally connected network of member firms in more than 150 countries bringing world-class capabilities, insights, and high-quality service to address clients’ most complex business challenges. To learn more about how Deloitte’s approximately 225,000 professionals make an impact that matters, please connect with us on Facebook, LinkedIn, or Twitter.
+															<br><br>This communication contains general information only, and none of Deloitte Touche Tohmatsu Limited, its member firms, or their related entities (collectively, the “Deloitte Network”) is, by means of this communication, rendering professional advice or services. Before making any decision or taking any action that may affect your finances or your business, you should consult a qualified professional adviser. No entity in the Deloitte Network shall be responsible for any loss whatsoever sustained by any person who relies on this communication.
+															<br><br>© {fyear}. For information, contact Deloitte Anjin LLC &amp; Deloitte Consulting LLC
+															<br><br> To no longer receive emails about this topic please send a return email to the sender with the word “Unsubscribe” in the subject line.
+														</div>
+													</td>
+												</tr>
+											</tbody>
+										</table>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+</body>
+</html>

@@ -1,0 +1,41 @@
+﻿
+@{
+	ViewBag.Title = "Help";
+	Layout = null;
+	System.Data.DataTable dt = (System.Data.DataTable)ViewBag.CodeList;
+}
+
+
+<div id="User_DetailedReport_Help" class="modal-dialog modal-lg">
+	<script>
+	</script>
+	<div class="modal-content">
+		<div class="modal-header">
+			<button type="button" class="close" data-bs-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+			<h4 class="modal-title">항목설명</h4>
+		</div>
+		<div class="modal-body">
+			<div class="table-responsive">
+				<table class="table table-bordered bg-white m-b-xxs">
+					<tr>
+						<th class="active text-center fw-200" style="background-color:#E2EFDA;">항목</th>
+						<th class="active text-center fw-600" style="background-color:#E2EFDA;">항목 설명/예시</th>
+					</tr>
+					@foreach (System.Data.DataRow dr in dt.Rows)
+					{
+						<tr>
+							<td class="text-left">@dr["CODE_NAME"]</td>
+							<td class="text-left">@dr["BIGO"]</td>
+						</tr>
+					}
+				</table>
+
+			</div>
+		</div>
+		<div class="modal-footer">
+			<div class="text-center">
+				<button class="btn btn-default btn-lg" type="button" data-bs-dismiss="modal">닫기</button>
+			</div>
+		</div>
+	</div>
+</div>

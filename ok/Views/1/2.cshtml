@@ -1,0 +1,886 @@
+﻿@using System.Data;
+@using Interlock.Controllers;
+@using Interlock.Helpers;
+@using WebUtil;
+@{
+	if ((bool)ViewBag.Ajax == true)
+	{
+		Layout = null;
+	}
+	else
+	{
+		Layout = "~/Views/Shared/_Layout.cshtml";
+	}
+
+	Util util = ViewBag.util;
+	DataSet ds = ViewBag.ds;
+	DataTable dt = ViewBag.dt;
+	//Guid guid = ViewBag.guid;
+
+	string heightMinus = "330";
+}
+
+<div id="PartnerExpenseUpload" class="wrapper wrapper-content animated fadeInRight">
+	<div class="row">
+		<div class="col-lg-12">
+			<div class="ibox float-e-margins">
+				<div class="ibox-title">
+					<h5>Expense Budget Upload</h5>
+					<div class="ibox-tools">
+						<button id="BtnTemplates" class="btn btn-xs btn-success" type="button" onclick="TempDown()"><i class="fa fa-save"></i> Templates 다운로드</button>
+						<button id="BtnErrExcel" class="btn btn-xs btn-primary hidden" type="button" onclick=""><i class="fa fa-save"></i> 엑셀</button>
+						<button id="BtnExcel" class="btn btn-xs btn-primary hidden" type="button" onclick=""><i class="fa fa-save"></i> 엑셀</button>
+						<button id="BtnUpload" class="btn btn-xs btn-info" type="button" onclick="ListUpload();"><i class="fa fa-upload"></i>업로드</button>
+						<button id="BtnSave" class="btn btn-xs btn-info" type="button" onclick="ListSave();">저장</button>
+						<button id="BtnExec" class="btn btn-xs btn-success" type="button" onclick="ListSearch();"><i class="fa fa-search"></i>검색</button>
+						<button id="BtnDel" class="btn btn-xs btn-danger" type="button" onclick="ListDel();">삭제</button>
+						<button id="BtnBack" class="btn btn-xs btn-warning hidden" type="button" onclick="ListBack();">뒤로</button>
+					</div>
+				</div>
+
+				<!-- 검색 영역 -->
+				<div class="ibox-content">
+					<div class="row" style="margin:0;">
+						<div id="SearchText" class="col-sm-12">
+							<label class="col-sm-12 col-form-label" style="" id="lbl_SearchText"></label>
+						</div>
+						<div id="SearchArea" class="col-sm-12">
+							<input type="hidden" name="csrf_token" value="@ViewBag.csrf_token">
+							<div class="form-group row m-b-xs">
+								<label class="col-sm-2 col-form-label" style="padding-top:3px;">Inout Option</label>
+								<div class="col-sm-10">
+									<input type="radio" id="rdoPartner" name="budgetType" value="P" checked>
+									<label for="rdoPartner">Partner별 Budget</label>
+									<span style="display:inline-block;width:20px;"></span>
+									<input type="radio" id="rdoGL" value="G" name="budgetType">
+									<label for="rdoGL">계정별 Budget</label>
+								</div>
+							</div>
+							<div class="hr-line-dashed m-t-xs" style="margin-bottom:10px;"></div>
+							<div class="form-group row m-b-xs">
+								<label class="col-sm-2 col-form-label" style="padding-top:3px;">Selection Option</label>
+								<div class="col-sm-10">
+									<div class="form-group row m-b-xs">
+										<label class="col-sm-2 col-form-label" style="padding-top:3px;">Fiscal Year<span class="text-danger">*</span></label>
+										<div class="col-sm-10">
+											<div class="input-group date col-sm-2 fw-100" dateMode="Year">
+												@Html.TextBox("FiscalYear", "", new { @class = "form-control input-sm", @maxlength = "4" })<span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+											</div>
+										</div>
+									</div>
+
+									<div class="form-group row m-b-xs">
+										<label class="col-sm-2 col-form-label" style="padding-top:3px;">Business Unit</label>
+										<div class="col-sm-10">
+											<select id="selBusinessUnit" name="selBusinessUnit" class="form-control input-sm fw-150">
+												<option value="">BU All</option>
+											</select>
+											<input type="hidden" id="hdnBuList" value="@ViewBag.buList" />
+										</div>
+									</div>
+
+									<div class="form-group row m-b-xs" id="costCenter_Area">
+										<label class="col-sm-2 col-form-label" style="padding-top:3px;">Cost Center</label>
+										<div class="col-sm-10">
+											<input type="text" id="CostCenter" class="form-control input-sm fw-120" name="CostCenter" value="" maxlength="10">
+										</div>
+									</div>
+									<div class="form-group row m-b-xs" id="partnerNo_Area">
+										<label class="col-sm-2 col-form-label" style="padding-top:3px;">Participating Partner</label>
+										<div class="col-sm-10">
+											<div class="input-group col-sm-3 fw-600" style="padding-top: 3px;">
+												@Html.UserCodeSWIFT("txtPartner", "", "", new { @class = "form-control fw-140", @maxlength = "8" })
+												<span class="input-group-btn">
+													<button id="btnPartner" type="button" class="btn btn-success" onclick="$('#txtPartner').dblclick();"><i class="fa fa-search"></i></button>
+												</span>
+												<div class="fw-450" style="display: table-cell; padding-left: 10px; text-align: left; vertical-align: middle;" id="txtPartnerInfo"></div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="hr-line-dashed m-t-xs" style="margin-bottom:10px;"></div>
+							<div class="form-group row m-b-sm" id="fileArea">
+								<label class="col-sm-2 col-form-label" style="padding-top:6px;">File Path</label>
+								<div class="col-sm-10">
+									@Html.FileUpload("InputFile", new { reqcheck = "reqcheck", messages = "파일을 선택해 주세요." })
+								</div>
+							</div>
+							<div style="display:none;">
+								<input type="hidden" name="guid" />
+							</div>
+						</div>
+						<!-- 리스트 영역 -->
+						<div id="ListArea" class="table-responsive p-xs">
+							<div id="ErrReportArea"></div>
+							<div id="ReportArea" style="display:none;"></div>
+
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+<script type="text/javascript">
+
+    const rdoBudgetType = $(`[name="budgetType"]`);
+    const getBudgetType = () => { return $(rdoBudgetType).filter(":checked").val();}
+    const heightMinus = @heightMinus;
+
+    function setFiscalYear() {
+        var d = new Date();
+        var m = d.getMonth() + 1;
+        var y = "";
+
+        if (m >= 6) {
+            y = d.getFullYear() + 1;
+        }
+        else if (m <= 5) {
+            y = d.getFullYear();
+        }
+
+        $("#FiscalYear").val(y);
+    }
+
+    // 검색 유효성 체크
+    function fnValidate() {
+
+        if ($("#FiscalYear").val().trim() == '') {
+            Common.Msg("Info", {
+                mode: "msg"
+                , okback: function () {
+                    return false;
+                }
+                , text: "Fiscal Year 를 입력해 주세요."
+            });
+        }
+        else {
+            return true;
+        }
+
+    }
+
+    //업로드
+    const ListUpload = function () {
+        const diaObj = $("#SearchArea");
+        const InputFile = $("input[name='InputFile']").val();
+        if ($("#FiscalYear").val().trim() == "")
+        {
+            Common.Msg("FiscalYear 을 입력해 주세요.");
+            return;
+        }
+        else if (InputFile == "") {
+            Common.Msg("파일을 선택해 주세요.");
+            return;
+        }
+
+        Custom.Exec({
+            obj: diaObj
+            , url: "/Sap_PartnerExpenseReport/ExpenseBudgetExcelUpload"
+            , resultMessage: true
+            , fileUpload: true
+            , callback: (rtn) => {
+
+                //alert(rtn);
+                if (rtn == "OK") {
+
+                    //Common.Msg("업로드가 완료되었습니다.");
+                    ListSearch(true);
+                }
+                else if (rtn == "MSG") {
+                    ErrListSearch(true);
+                }
+                else {
+                    Common.Msg(rtn);
+                }
+            }
+        });
+    }
+
+    // 저장
+    const ListSave = function () {
+        var grid = $("#ReportArea").pqGrid("instance");
+        var msg = "";
+
+        Common.Msg(msg + "저장 하시겠습니까?", {
+            mode: "confrim",
+            okback: function () {
+                var isExcute = false;
+                var resultMsg = "";
+                var updateflag = true;
+                var delflag = true;
+                var resultcode = "";
+                var errormsg = "";
+
+                // Check Values
+                for (var j = 0; j < grid.pdata.length; j++) {
+                    if (grid.pdata[j]["ROW_NO"] == "U" || grid.pdata[j]["ROW_NO"] == "D") {
+                        isExcute = true;
+                    }
+                }
+
+                if (isExcute == false) {
+                    Common.Msg("변경된 사항이 없습니다.");
+                    return false;
+                }
+
+                Common.Loading.Show();
+
+                const reqBody = {};
+                reqBody["budgetType"] = getBudgetType();
+                reqBody["rows"] = [];
+
+                for (let j = 0; j < grid.pdata.length; j++) {
+
+                    if (typeof grid.pdata[j]["ROW_NO"] === "undefined" || grid.pdata[j]["ROW_NO"] === "" || grid.pdata[j]["ROW_NO"] !== "U") continue;
+
+                    const obj = new Object();
+                    obj.FY = grid.pdata[j]["FY"];
+					obj.WT_CD = grid.pdata[j]["WT_CD"];
+                    if (reqBody["budgetType"] === "P") {
+                        obj.PN_NO = grid.pdata[j]["PN_NO"];
+                    }
+                    else if (reqBody["budgetType"] === "G") {
+                        obj.CC_CD = grid.pdata[j]["CC_CD"];
+                    }
+
+					obj.WKG = grid.pdata[j]["WKG"];
+
+                    reqBody["rows"].push(obj);
+
+                }
+
+                const reqInfo = new Common.RequestInfo();
+                reqInfo.AddParameter("reqBody", JSON.stringify(reqBody));
+                reqInfo.AddParameter("csrf_token", $(`[name="csrf_token"]`).val());
+
+                Common.Ajax("/Sap_PartnerExpenseReport/ExpBudgetUpdate", reqInfo, function (rtn) {
+                    if (rtn.split("||")[0] == "OK") {
+                       // grid.pdata[j]["ROW_NO"] = "";
+
+                    }
+                    else {
+                        updateflag = false;
+                        errormsg += rtn + "\n";
+                    }
+                });
+
+                if (updateflag == true && delflag == true) {
+                    resultMsg = "정상 처리되었습니다."
+                }
+                else {
+                    resultMsg = "처리 오류\n" + errormsg + "\n참고 하셔서 확인 바랍니다.";
+                }
+
+                Common.Loading.Hide();
+
+                Common.Msg(resultMsg, {
+                    mode: "msg",
+                    okback: function () {
+                        //fnSearchList();
+                        ListSearch()
+                    }
+                });
+            }
+        });
+
+    }
+
+    //삭제
+    const ListDel = function (loading) {
+
+        var data = $("#ReportArea").pqGrid("option", "dataModel.data");
+        const reqBody = {};
+
+        reqBody["budgetType"] = getBudgetType();
+        reqBody["rows"] = [];
+
+        cnt = 0;
+
+        for (var i = 0, len = data.length; i < len; i++) {
+
+            var rowData = data[i];
+            if (rowData.state) {
+
+                const obj = new Object();
+                obj.FY = data[i]["FY"];
+                obj.WT_CD = data[i]["WT_CD"];
+                if (reqBody["budgetType"] === "P") {
+                    obj.PN_NO = data[i]["PN_NO"];
+                }
+                else if (reqBody["budgetType"] === "G") {
+                    obj.CC_CD = data[i]["CC_CD"];
+                }
+
+                reqBody["rows"].push(obj);
+
+                cnt += 1;
+            }
+
+        }
+
+        if (cnt == 0) {
+            Common.Msg("체크박스를 선택해주세요.");
+            return;
+        }
+
+        var jsonDelData = JSON.stringify(reqBody);
+
+        Common.Msg("삭제를 실행하시겠습니까?", {
+            mode: "confrim"
+            , okback: function () {
+
+                let errormsg = "";
+                let delflag = true;
+
+                var reqInfo = new Common.RequestInfo();
+                reqInfo.AddParameter("csrf_token", $(`[name="csrf_token"]`).val());
+                reqInfo.AddParameter("reqBody", jsonDelData);
+
+                Common.Ajax("/Sap_PartnerExpenseReport/ExpBudgetDelete", reqInfo, function (rtn) {
+                    if (rtn.split("||")[0] == "OK") {
+
+                    }
+                    else {
+                        delflag = false;
+                        errormsg += rtn + "\n";
+                    }
+                });
+
+                if (delflag == true) {
+                    resultMsg = "정상 처리되었습니다."
+                }
+                else {
+                    resultMsg = "처리 오류\n" + errormsg + "\n참고 하셔서 확인 바랍니다.";
+                }
+
+                Common.Loading.Hide();
+
+                Common.Msg(resultMsg, {
+                    mode: "msg",
+                    okback: function () {
+                        //fnSearchList();
+                        ListSearch()
+                    }
+                });
+            }
+        });
+    }
+
+	// Col Model Default Settings
+	const c1 = { dataType: "string", sortable: false, editor: false, editable: false }
+	const c2 = { dataType: "float", format: "#,###", halign: "center", align: "right", sortable: false, editor: false, editable: false }
+	// halign: "center", align: "center"
+	const c3_cc = { halign: "center", align: "center" }
+
+    // Temp 조회
+    const ErrListSearch = function (loading) {
+        var heightMinus = @heightMinus;
+        const budgetType = getBudgetType();
+
+        if (fnValidate()) {
+            if (typeof loading == "undefined") loading = true;
+
+            if (loading) {
+                Common.Loading.Show();
+            }
+
+            $("#ErrReportArea").show();
+            $("#ReportArea").hide();
+
+            $("#BtnExec").addClass("hidden");
+            $("#BtnBack").removeClass("hidden");
+            $("#SearchArea").hide();
+            $("#ListArea").show();
+            $("#BtnErrExcel").removeClass("hidden");
+
+            $("#BtnUpload").hide();
+			$("#BtnSave").hide();
+            $("#BtnTemplates").hide();
+
+            if ($("#ListArea").attr("Create") == undefined) {
+                $("#ListArea").attr("Create", "Y");
+
+                var initDs = Common.DataSet.StringToDataSet(decodeURIComponent("@Html.Raw(util.EncodeURIComponent(util.Convert.DataSetToString(ds)))"));
+                var data = [];
+
+                if (initDs != null && initDs.Tables.Count > 0) {
+                    data = initDs.Tables[0].Rows;
+                }
+
+                var gridObj = {
+                    bubble: false,
+                    numberCell: { show: true, resizable: true, title: "순번", width: 50, minWidth: 50, align: "center" },
+                    editor: { type: 'textbox', style: 'border-radius:0px;border:0px;' },
+                    editModel: { clicksToEdit: 2 },
+                    selectionModel: { type: 'cell', mode: 'block' },
+                    height: $(window).height() - heightMinus,
+                    title: "",
+                    sortable: false,
+                    resizable: false,
+                    menuIcon: false,
+                    scrollModel: { autoFit: false },
+                    hoverMode: 'row',
+                    rowHtHead: 20,
+                    roundCorners: false,
+                    rowBorders: true,
+                    showBottom: false,
+                    showHeader: true,
+                    showTitle: false,
+                    showTop: false,
+                    showToolbar: false,
+                    stripeRows: true,
+                    wrap: false,
+                    selectChange: function (event, ui) {
+                    },
+                    rowClick: function (event, ui) {
+                    },
+                    cellClick: function (event, ui) {
+                    },
+                    rowDblClick: function (event, ui) {
+                    },
+                    rowSelect: function (event, ui) {
+                    },
+                    open: function () {
+                    },
+                    headerCellClick: function (event, ui) {
+                    },
+                    change: function (event, ui) {
+                    },
+                    headerMenu: false,
+                    contextMenu: {
+                    },
+                    beforeTableView: function (event, ui) {
+                    },
+                    rowInit: function (ui) {
+                    },
+                };
+
+
+                //gridObj.colModel = [];
+                const colModel = [];
+                colModel.push(
+					{
+						...c1, ...c3_cc, title: "Status", width: 80, dataIndx: "STATUS", render: function (ui) {
+                            if (ui.rowData["STATUS"] == "E") {
+                                  return {
+                                      text: ui.rowData,
+                                      style: 'background-color:#f44336;font-weight:bold;'
+                                  }
+                              }
+                            $("#BtnSave").hide();
+                        },
+                    },
+					{ ...c1, ...c3_cc, title: "Message", width: 250, dataIndx: "MSG" }
+                );
+                if (budgetType === "P") {
+                    colModel.push(
+                        { ...c1, ...c3_cc, title: "Fiscal Year", width: 100, dataIndx: "FY" },
+						{ ...c1, ...c3_cc, title: "구분", width: 100, dataIndx: "GUBUN" },
+						{ ...c1, ...c3_cc, title: "Partner No", width: 100, dataIndx: "PN_NO" },
+						{ ...c1, title: "Partner Name", width: 250, halign: "center", align: "left", dataIndx: "PN_NM" }
+					);
+                }
+                colModel.push(
+                    { ...c1, title: "WBS TYPE", dataIndx: "WT_CD", width: 140, halign: "center", align: "left", hidden: true },
+					{ ...c1, title: "WBS TYPE", dataIndx: "WT_NM", width: 140, halign: "center", align: "left" },
+                );
+				if (budgetType === "P") {
+					colModel.push(
+						{ ...c1, title: "Engagement(WBS L2)", dataIndx: "WBS_CD", width: 170, halign: "center", align: "left" },
+					);
+                }
+				colModel.push(
+					{ ...c1, ...c3_cc, title: "BU Code", width: 100, dataIndx: "BU_CD", hidden: true },
+					{ ...c1, ...c3_cc, title: "BU Name", width: 140, dataIndx: "BU_NM" },
+					{ ...c1, ...c3_cc, title: "Cost Center", width: 100, dataIndx: "CC_CD", hidden: true },
+					{ ...c1, title: "Cost Center Desc.", width: 250, halign: "center", align: "left", dataIndx: "CC_NM" },
+					{ ...c2, title: "Amount", width: 250, dataIndx: "WKG" },
+				);
+
+                gridObj.colModel = colModel;
+                gridObj.dataModel = { data: data };
+
+                $("#ErrReportArea").pqGrid(gridObj);
+            }
+
+            setTimeout(function () {
+                var reqInfo = new Common.RequestInfo();
+                reqInfo.formData = new FormData();
+                reqInfo.AddParameter($("#SearchArea"));
+
+                Common.Loading.Show();
+                Common.Ajax("/Sap_PartnerExpenseReport/ExpBudgetSelectFailed", reqInfo, function (rtn) {
+                    var dataDs = Common.DataSet.StringToDataSet(rtn);
+                    var datas = dataDs.Tables[0].Rows;
+                    $("#ErrReportArea").pqGrid("option", "dataModel.data", datas);
+                    $("#ErrReportArea").pqGrid("refreshView");
+
+                    Common.Loading.Hide();
+                }, {
+                    okErr: function (result) {
+                        Common.Loading.Hide();
+                        Common.CheckErrorMsg(result);
+                        //ListBack();
+                    }
+                });
+            }, 500);
+        }
+    }
+
+    // BU 바인딩
+	const bindBU = () => {
+
+		$("#selBusinessUnit option:not(:first)").remove();
+
+		const buList = $("#hdnBuList").val();
+        const dataTable = Common.DataSet.StringToDataTable(buList);
+		const targetDate = $("#FiscalYear").val() + "-05"
+		const fy = Common.GetFiscalYear(targetDate);
+		let targetFlag = "Y";
+		if (fy.fiscalYear < 2025) targetFlag = "Y"; else targetFlag = "N";
+
+		for (const row of dataTable.Rows) {
+
+			if (row.FY24_BELOW !== targetFlag) continue;
+
+			// 검색용 BU 콤보 박스
+			var newOption = $("<option></option>")
+				.val(row.CostCenterFunction)
+				.text(row.CostCenterFunctionName);
+			// select 요소에 추가
+			$("#selBusinessUnit").append(newOption);
+		}
+    }
+
+    // 조회
+    const ListSearch = function (loading) {
+        const budgetType = getBudgetType();
+
+        if (fnValidate()) {
+            if (typeof loading == "undefined") loading = true;
+
+            if (loading) {
+                Common.Loading.Show();
+            }
+
+            $("#ErrReportArea").hide();
+            $("#ReportArea").show();
+
+            $("#BtnTemplates").hide();
+            $("#BtnExec").addClass("hidden");
+            $("#BtnBack").removeClass("hidden");
+            $("#SearchArea").hide();
+            $("#ListArea").show();
+            $("#BtnExcel").removeClass("hidden");
+
+            $("#BtnUpload").hide();
+            $("#BtnSave").show();
+            $("#BtnDel").show();
+
+
+            if ($("#SearchArea").attr("Create") == undefined) {
+                $("#SearchArea").attr("Create", "Y");
+
+                var initDs = Common.DataSet.StringToDataSet(decodeURIComponent("@Html.Raw(util.EncodeURIComponent(util.Convert.DataSetToString(ds)))"));
+                var data = [];
+
+                if (initDs != null && initDs.Tables.Count > 0) {
+                    data = initDs.Tables[0].Rows;
+                }
+
+                var gridObj = {
+                    bubble: false,
+                    numberCell: { show: true, resizable: true, title: "순번", width: 50, minWidth: 50, align: "center" },
+                    editor: { type: 'textbox', style: 'border-radius:0px;border:0px;' },
+                    editModel: { clicksToEdit: 2 },
+                    selectionModel: { type: 'cell', mode: 'block' },
+                    height: $(window).height() - heightMinus,
+                    title: "",
+                    sortable: false,
+                    resizable: false,
+                    menuIcon: false,
+                    scrollModel: { autoFit: false },
+                    hoverMode: 'row',
+                    rowHtHead: 20,
+                    roundCorners: false,
+                    rowBorders: true,
+                    showBottom: false,
+                    showHeader: true,
+                    showTitle: false,
+                    showTop: false,
+                    showToolbar: false,
+                    stripeRows: true,
+                    wrap: false,
+                    selectChange: function (event, ui) {
+                    },
+                    rowClick: function (event, ui) {
+                    },
+                    cellClick: function (event, ui) {
+                    },
+                    rowDblClick: function (event, ui) {
+                    },
+                    rowSelect: function (event, ui) {
+                    },
+                    open: function () {
+                    },
+                    headerCellClick: function (event, ui) {
+                    },
+                    change: function (event, ui) {
+                        if (ui.source == "paste" || ui.source == "edit" || ui.source == "clear") {
+                            console.log(ui.source);
+
+                            if (ui.updateList.length > 0) {
+                                for (var i = 0; i < ui.updateList.length; i++) {
+                                    var rowInfo = ui.updateList[i];
+                                    var rowIndx = rowInfo.rowIndx;
+
+                                    this.pdata[rowIndx]["ROW_NO"] = "U";
+
+
+									this.pdata[rowIndx]["WKG"] = Number(this.pdata[rowIndx]["WKG"]);
+
+
+                                    console.log(this.pdata[rowIndx]);
+
+                                    $(this.element).pqGrid("refreshRow", { rowIndx: rowInfo.rowIndx });
+                                }
+                            }
+                        }
+                    },
+                    headerMenu: false,
+                    contextMenu: {
+                    },
+                    beforeTableView: function (event, ui) {
+                    },
+                    rowInit: function (ui) {
+                    },
+                };
+
+                const colModel = [];
+                colModel.push(
+                    {
+                        dataIndx: "state", maxWidth: 100, minWidth: 100, align: "center", resizable: false,
+                        type: 'checkBoxSelection', cls: 'ui-state-default', sortable: false, editor: false,
+                        title: "<label><input type='checkbox' />&nbsp;삭제</label>",
+                        dataType: 'bool',
+                        cb: {
+                            all: false, //checkbox selection in the header affect current page only.
+                            header: true //show checkbox in header.
+                        },
+                        render: function (ui) {
+                            var cb = ui.column.cb,
+                                cellData = ui.cellData,
+                                checked = cb.check === cellData ? 'checked' : '',
+                                disabled = this.isEditableCell(ui) ? "" : "disabled"
+
+                            if (ui.rowData.ROW_NO == "U") {
+                                checked = "";
+                                disabled = "disabled";
+                            }
+                            if (ui.rowData.ROW_NO != "U") {
+                                if (checked == "checked") {
+                                    ui.rowData.ROW_NO = "D";
+                                }
+                                else {
+                                    ui.rowData.ROW_NO = "";
+                                }
+                            }
+
+                            return {
+                                text: "<label><input type='checkbox' " + checked + " />" + "</label>",
+                                style: (disabled ? "background:lightgray" : "")
+                            };
+                        }
+                    }
+                );
+                if (budgetType === "P")
+                {
+                    colModel.push(
+						{ ...c1, ...c3_cc, title: "Fiscal Year", width: 100, dataIndx: "FY" },
+						{ ...c1, ...c3_cc, title: "구분", width: 100, dataIndx: "GUBUN" },
+                        { ...c1, ...c3_cc, title: "Partner No", width: 100, dataIndx: "PN_NO" },
+                        { ...c1, title: "Partner Name", width: 150, halign: "center", align: "left", dataIndx: "PN_NM" }
+                    );
+                }
+                colModel.push(
+                    { ...c1, title: "WBS TYPE", dataIndx: "WT_CD", width: 140, halign: "center", align: "left", hidden: true },
+					{ ...c1, title: "WBS TYPE", dataIndx: "WT_NM", width: 140, halign: "center", align: "left" },
+                );
+				if (budgetType === "P") {
+					colModel.push(
+						{ ...c1, title: "Engagement(WBS L2)", dataIndx: "WBS_CD", width: 170, halign: "center", align: "left" },
+					);
+				}
+				colModel.push(
+					{ ...c1, ...c3_cc, title: "BU Code", width: 100, dataIndx: "BU_CD", hidden: true },
+					{ ...c1, ...c3_cc, title: "BU Name", width: 140, dataIndx: "BU_NM" },
+					{ ...c1, ...c3_cc, title: "Cost Center", width: 100, dataIndx: "CC_CD", hidden: true },
+					{ ...c1, title: "Cost Center Desc.", width: 250, halign: "center", align: "left", dataIndx: "CC_NM" }
+				);
+				// Make Ediable Col
+				const mec = (title_, colID) => {
+
+					const editor_ = { attr: `onkeyup="this.value=this.value.replace(/[^0-9]/g,\'\')"` };
+					return { title: title_, width: 250, styleHead: { "background-color": "#fff3cc" }, halign: "center", align: "right", dataType: "float", format: "#,###", dataIndx: colID, sortable: false, editor: editor_ };
+				}
+                colModel.push(
+                    mec("Amount", "WKG")
+                    // ,{ title: "Amount", width: 250, dataIndx: "AMT", ...c2 }
+                );
+
+                gridObj.colModel = colModel;
+                gridObj.dataModel = { data: data };
+
+                $("#ReportArea").pqGrid(gridObj);
+            }
+
+            setTimeout(function () {
+                var reqInfo = new Common.RequestInfo();
+                reqInfo.formData = new FormData();
+                reqInfo.AddParameter($("#SearchArea"));
+
+                Common.Loading.Show();
+                Common.Ajax("/Sap_PartnerExpenseReport/ExpBudgetSelect", reqInfo, function (rtn) {
+                    var dataDs = Common.DataSet.StringToDataSet(rtn);
+                    var datas = dataDs.Tables[0].Rows;
+                    $("#ReportArea").pqGrid("option", "dataModel.data", datas);
+                    $("#ReportArea").pqGrid("refreshView");
+
+                    Common.Loading.Hide();
+                }, {
+                    okErr: function (result) {
+                        Common.Loading.Hide();
+                        Common.CheckErrorMsg(result);
+                        //ListBack();
+                    }
+                });
+            }, 500);
+        }
+    }
+
+    // 뒤로 가기
+    const ListBack = function () {
+        Common.Loading.Show();
+        location.reload();
+
+        //if ($("a.fileinput-exists").length > 0) {
+        //    $("a.fileinput-exists").click();
+        //}
+
+        //$("#BtnTemplates").show();
+        //$("#BtnExcel").addClass("hidden");
+        //$("#BtnErrExcel").addClass("hidden");
+        //$("#BtnBack").addClass("hidden");
+        //$("#BtnExec").removeClass("hidden");
+        //$("#SearchArea").show();
+        //$("#ListArea").hide();
+        //$("#BtnUpload").show();
+        //$("#BtnSave").hide();
+        //$("#BtnDel").hide();
+
+    }
+
+    // 템플릿 다운로드
+    const TempDown = function () {
+        Common.Loading.Show();
+
+        const budgetType = getBudgetType();
+
+        if (budgetType === "P")
+        {
+            window.location = "@Url.Action("TemplatesDownEBU", "Sap_PartnerExpenseReport", new RouteValueDictionary(new { type = "P" }))";
+        }
+        else if (budgetType === "G")
+        {
+            window.location = "@Url.Action("TemplatesDownEBU", "Sap_PartnerExpenseReport", new RouteValueDictionary(new { type = "G" }))";
+        }
+
+        Common.Loading.Hide();
+    }
+
+	const downExcel_Error = function () {
+		Common.Loading.Show();
+		var date = Common.GetTodayTimeString();
+
+		setTimeout(function () {
+			var grid1 = $("#ErrReportArea").pqGrid("instance");
+			var w1 = grid1.exportExcel({ workbook: true, sheetName: "PartnerExpenseUpload_Error", render: true, noheader: false });
+
+			var blob = pq.excel.exportWb({ workbook: w1, type: 'blob' });
+			saveAs(blob, "PartnerExpenseUpload_Error_" + date + ".xlsx");
+
+			Common.Loading.Hide();
+		}, 500);
+    }
+
+	const downExcel = function () {
+		Common.Loading.Show();
+		var date = Common.GetTodayTimeString();
+
+		setTimeout(function () {
+			var grid1 = $("#ReportArea").pqGrid("instance");
+			var w1 = grid1.exportExcel({ workbook: true, sheetName: "PartnerExpenseUpload", render: true, noheader: false });
+
+			var blob = pq.excel.exportWb({ workbook: w1, type: 'blob' });
+			saveAs(blob, "PartnerExpenseUpload_" + date + ".xlsx");
+
+			Common.Loading.Hide();
+		}, 500);
+	}
+
+    /*------------------------------------------------------------
+        이벤트 바인딩
+    ------------------------------------------------------------*/
+
+	// 엑셀 다운로드: 에러 케이스
+	$("#BtnErrExcel").bind("click", downExcel_Error);
+
+	// 엑셀 다운로드: 정상 케이스
+	$("#BtnExcel").bind("click", downExcel);
+
+    // Budget 타입 라디오 버튼 변경 이벤트
+    $(rdoBudgetType).bind("input", (e) => {
+
+        const budgetType_ = $(e.currentTarget).val();
+        const partnerNo_Area = $("#partnerNo_Area");
+        if (budgetType_ === "P") partnerNo_Area.show();
+        else partnerNo_Area.hide();
+
+    });
+
+    // Fiscal Year 변경 이벤트
+    $("#FiscalYear").bind("change", function (e) {
+
+        const fy = $(e.currentTarget).val();
+        if (Number(fy) < 2024) {
+            alert("2024년 보다 작을 수 없습니다.");
+            $(this).val("2024");
+            $(this).focus();
+        }
+        bindBU();
+    });
+
+    // document.ready 이벤트
+    $(document).ready(function () {
+        Common.Loading.Show();
+
+		setFiscalYear();
+
+		$("#BtnExcel").addClass("hidden");
+		$("#BtnErrExcel").addClass("hidden");
+		$("#BtnSave").hide();
+		$("#BtnDel").hide();
+
+		window.setTimeout(function () {
+			$("#PartnerExpenseUpload").removeClass("fadeInRight");
+		}, 1000);
+
+        bindBU();
+		Common.Loading.Hide();
+	});
+
+</script>

@@ -1,0 +1,1179 @@
+﻿@using System.Data;
+@using Interlock.Controllers;
+@using Interlock.Helpers;
+@using WebUtil;
+@{
+	if ((bool)ViewBag.Ajax == true)
+	{
+		Layout = null;
+	}
+	else
+	{
+		Layout = "~/Views/Shared/_Layout.cshtml";
+	}
+
+	Util util = ViewBag.util;
+	DataSet ds = ViewBag.ds;
+	DataTable dt = ViewBag.dt;
+	DataTable dtGubun = ViewBag.dtGubun;
+	DataTable dt_CC = ViewBag.dt_CC;
+	DataTable dt_CostCenter = ViewBag.dt_CostCenter;
+
+	string AuthLevel = ViewBag.AuthLevel;
+	string PCS = ViewBag.PCS;
+	string PartnerInfo = ViewBag.PartnerInfo;
+	string CostCenterAll = ViewBag.CostCenterAll;
+	string SelectCostCenterUrl = ViewBag.SelectCostCenterUrl;
+
+	//Guid guid = ViewBag.guid;
+	// string heightMinus = "330";
+}
+<style>
+	select.disabled {
+		background-color: #eee; /* 배경색 변경 */
+		cursor: not-allowed; /* 커서 모양 변경 */
+		pointer-events: none; /* 클릭 이벤트 무시 */
+	}
+</style>
+<div id="ExpenseBudgetReport" class="wrapper wrapper-content animated fadeInRight">
+	<div class="row">
+		<div class="col-lg-12">
+			<div class="ibox float-e-margins">
+				<div class="ibox-title">
+					<h5>P&A 경비 예실관리 리포트</h5>
+					<div class="ibox-tools">
+						@*<button id="BtnHelp" class="btn btn-xs btn-info" type="button" onclick="ListBack();"><i class="fa fa-exclamation-circle"></i>Help</button>*@
+						<button id="BtnExcel_grid1" class="btn btn-xs btn-primary hidden" type="button" onclick=""><i class="fa fa-save"></i>&nbsp;엑셀</button>
+						<button id="BtnExcel_grid2" class="btn btn-xs btn-primary hidden" type="button" onclick=""><i class="fa fa-save"></i>&nbsp;Detail(CSV)</button>
+						@if (AuthLevel == "ADMIN")
+						{
+							<button id="BtnCode1" class="btn btn-xs btn-primary" type="button" value="1"><i class="fa fa-envelope"></i>&nbsp;CC권한관리</button>
+						}
+						<button id="BtnSearch" class="btn btn-xs btn-success" type="button"><i class="fa fa-search"></i>&nbsp;검색</button>
+						<button id="BtnBack" class="btn btn-xs btn-warning hidden" type="button"><i class="fa fa-undo"></i>&nbsp;뒤로</button>
+					</div>
+				</div>
+				<!-- 검색 영역 -->
+				<div class="ibox-content">
+					<div class="row" style="margin:0;">
+						<div id="SearchArea" class="col-sm-12">
+							<input type="hidden" name="csrf_token" value="@ViewBag.csrf_token">
+							<input type="hidden" name="AuthLevel" value="@AuthLevel" />
+							<input type="hidden" name="page_idx" id="page_idx" value="1" />
+							<input type="hidden" name="page_size" id="page_size" value="20" />
+							<input type="hidden" id="toList" name="toList">
+							<input type="hidden" id="selType" name="selType" />
+							<div class="form-group row m-b-xs">
+								<div class="col-sm-12">
+									<div class="form-group row m-b-xs">
+										<label class="col-sm-2 col-form-label" style="padding-top:3px;">Key Month</label>
+										<div class="col-sm-10">
+											<div class="input-group date col-sm-2 fw-120" dateMode="Month2">
+												@Html.TextBox("txtKeyMonth", "", new { @class = "form-control", @maxlength = "7", @title = "Key Month" })<span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+											</div>
+										</div>
+									</div>
+									<div class="form-group row m-b-xs">
+										<label class="col-sm-2 col-form-label" style="padding-top:3px;">구분</label>
+										<div class="col-sm-10">
+											<select id="selGubun" name="selGubun" class="form-control input-sm fw-150" title="구분">
+												@if (dtGubun != null)
+												{
+													for (int i = 0; i < dtGubun.Rows.Count; i++)
+													{
+														<option value="@dtGubun.Rows[i]["value"].ToString()">@dtGubun.Rows[i]["name"].ToString()</option>
+													}
+												}
+											</select>
+										</div>
+									</div>
+									<div class="form-group row m-b-xs">
+										<label class="col-sm-2 col-form-label" style="padding-top:3px;">Company Code</label>
+										<div class="col-sm-10">
+											<select id="selCompanyCode" name="selCompanyCode" class="form-control input-sm fw-150" title="Company Code">
+												<option value=""></option>
+												@if (dt_CC != null)
+												{
+													for (int i = 0; i < dt_CC.Rows.Count; i++)
+													{
+														<option value="@dt_CC.Rows[i]["COMPANY_CODE"].ToString()">@dt_CC.Rows[i]["COMPANY_NAME"].ToString()</option>
+													}
+												}
+											</select>
+										</div>
+									</div>
+									<div class="form-group row m-b-xs" id="costCenter_Area">
+										<label class="col-sm-2 col-form-label" style="padding-top:3px;">Cost Center</label>
+										<div class="col-sm-10">
+											@if (AuthLevel == "BU_HEAD")
+											{
+												<select id="ctrlCostCenter" name="ctrlCostCenter" class="form-control input-sm fw-150" title="Cost Center">
+													<option value="@CostCenterAll"></option>
+													@for (int i = 0; i < dt_CostCenter.Rows.Count; i++)
+													{
+														<option value="@dt_CostCenter.Rows[i]["KOSTL"].ToString()">@dt_CostCenter.Rows[i]["KOSTL"].ToString() (@dt_CostCenter.Rows[i]["LTEXT"].ToString())</option>
+													}
+												</select>
+											}
+											else
+											{
+												<input type="text" id="ctrlCostCenter" name="ctrlCostCenter" class="form-control input-sm fw-150" title="CostCenter" value="" maxlength="10">
+											}
+										</div>
+									</div>
+									<div class="form-group row m-b-xs">
+										<label class="col-sm-2 col-form-label" style="padding-top:3px;">Business Unit</label>
+										<div class="col-sm-10">
+											<select id="selBusinessUnit" name="selBusinessUnit" title="BU" class="form-control input-sm fw-150">
+												<option value=""></option>
+											</select>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div style="display:none;">
+								<input type="hidden" name="guid" />
+							</div>
+						</div>
+						<!-- 리스트 영역 -->
+						<div id="ListArea" class="table-responsive p-ml">
+							<div id="SearchText" style="display: flex; justify-content: space-between ">
+								<label class="col-form-label" style="" id="lbl_SearchText"></label>
+								<button id="BtnHelp" class="btn btn-s btn-info" type="button" onclick="Help();"><i class="fa fa-exclamation-circle"></i>&nbsp;항목설명</button>
+							</div>
+							<div id="tabs">
+								<ul>
+									<li class="litab" idx="0"><a href="#tabs-0">FIRM</a></li>
+									<li class="litab" idx="1"><a href="#tabs-1">BU</a></li>
+									<li class="litab" idx="2"><a href="#tabs-2">Detail</a></li>
+								</ul>
+								<div id="tabs-0" class="divtab">
+									<div id="ra0" class="ReportArea"></div>
+								</div>
+								<div id="tabs-1" class="divtab">
+									<div id="ra1" class="ReportArea"></div>
+								</div>
+								<div id="tabs-2" class="divtab">
+									<div id="ra2" class="ReportArea"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<input type="hidden" id="txtKeyMonth_before" value="" />
+<input type="hidden" id="hdnBuList" value="@ViewBag.buList" />
+<script>
+	// datepicker용
+	DatepickerMonthSet = {
+		format: "yyyy-mm",
+		dateFormat: "yyyy-mm",
+		startView: "months",
+		minView: "months",
+		minViewMode: 1,
+		language: "kr",
+		todayBtn: "linked",
+		keyboardNavigation: false,
+		forceParse: false,
+		calendarWeeks: true,
+		autoclose: true,
+		todayHighlight: true,
+		toggleActive: true
+	}
+
+	// DatePicker (기본)
+	var GetDateKeyOnlyNum = function (val) {
+		var num = val;
+		var tmp = "";
+
+		for (var i = 0; i < num.length; i++) {
+			if (num.charAt(i) >= 0 && num.charAt(i) <= 9)
+				tmp = tmp + num.charAt(i);
+			else
+				continue;
+		}
+		return tmp;
+	}
+	var GetDateKeyUp = function (e, Obj) {
+		var EventObj;
+		if (window.event) {
+			EventObj = window.event;
+		} else {
+			EventObj = e;
+		}
+
+		if (EventObj.keyCode == 46) {
+			Obj.val("");
+			return;
+		}
+
+		var str = GetDateKeyOnlyNum(Obj.val());
+		var leng = str.length;
+
+		switch (leng) {
+			case 1:
+			case 2:
+			case 3:
+			case 4: Obj.val(str); break;
+			case 5:
+			case 6: Obj.val(str.substring(0, 4) + "-" + str.substring(4)); break;
+			case 7:
+			case 8: Obj.val(str.substring(0, 4) + "-" + str.substring(4, 6) + "-" + str.substring(6)); break;
+		}
+	}
+	var GetDateKeyRetrun = function (Obj) {
+		var vDate = new Date();
+		var dYear = vDate.getFullYear().toString();
+		var dMonth = "";
+		var dDate = "";
+
+		dMonth = "0" + (vDate.getMonth() + 1).toString();
+		if (dMonth.length == 3)
+			dMonth = dMonth.substring(1, 3);
+
+		dDate = "0" + vDate.getDate().toString();
+		if (dDate.length == 3)
+			dDate = dDate.substring(1, 3);
+
+		var inputText = Obj.val();
+		if (inputText.length == 1) {
+			Obj.val(dYear + "-" + dMonth + "-0" + inputText);
+		} else if (inputText.length == 2) {
+			Obj.val(dYear + "-" + dMonth + "-" + inputText);
+		} else if (inputText.length == 3) {
+			var firstText = inputText.substring(0, 1);
+			var lastText = inputText.substring(1, 3);
+			Obj.val(dYear + "-0" + firstText + "-" + lastText);
+		} else if (inputText.length == 4) {
+			var firstText = inputText.substring(0, 2);
+			if (firstText == "20" || firstText == "19") {
+				Obj.val(inputText);
+			} else {
+				var lastText = inputText.substring(2, 4);
+				Obj.val(dYear + "-" + firstText + "-" + lastText);
+			}
+		} else if (inputText.length == 7) {
+			var arr = inputText.split("-");
+			if (arr.length == 2) {
+				if (arr[0].length == 4 && arr[1].length == 2) {
+					Obj.val(inputText);
+				} else {
+					Obj.val(dYear + "-" + dMonth + "-" + dDate);
+				}
+			}
+		}
+	}
+	var GetDateCheckDate = function (Obj) {
+		var str = Obj.val().replace(".", "").replace(".", "").replace("-", "").replace("-", "").trim();
+
+		if (str.length == 8) {
+			var vDate = new Date();
+			var nYear = parseInt(str.substring(0, 4), 10);
+			var nMonth = parseInt(str.substring(4, 6), 10) - 1;
+			var nDate = parseInt(str.substring(6), 10);
+
+			vDate.setFullYear(nYear);
+			vDate.setMonth(nMonth);
+			vDate.setDate(nDate);
+
+			if (vDate.getFullYear() != nYear ||
+				vDate.getMonth() != nMonth ||
+				vDate.getDate() != nDate) {
+				return false;
+			}
+			return true;
+		} else if (str.length == 4) {
+			var inputText = Obj.val();
+			var firstText = inputText.substring(0, 2);
+			if (firstText == "20" || firstText == "19") {
+				return true;
+			} else {
+				return false;
+			}
+		} else if (str.length == 6) {
+			var inputText = Obj.val();
+			var arr = inputText.split(".");
+			if (arr.length == 2) {
+				if (arr[0].length == 4 && arr[1].length == 2) {
+					return true;
+				} else {
+					return false;
+				}
+			}
+		} else {
+			return false;
+		}
+	}
+
+	const dateCtrl = $('.input-group.date[dateMode=Month2]');
+	dateCtrl.datepicker(DatepickerMonthSet).on("show", Custom.DatepickerShow).on("hide", Custom.DatepickerHide);
+	dateCtrl.find("input").each(function () { var thisObj = $(this); $(this).data("SetValue", function (value) { thisObj.val(value); thisObj.parent().datepicker(DatepickerMonthSet).datepicker("update").on("show", Custom.DatepickerShow).on("hide", Custom.DatepickerHide); }); $(this).bind("keypress", function (e) { $('.datepicker').hide(); if (Common.Enter(e) == true) { thisObj.blur(); } }); $(this).bind("keyup", function (e) { GetDateKeyUp(e, thisObj); }); $(this).bind("blur", function (e) { GetDateKeyRetrun(thisObj); if (thisObj.val() != "" && GetDateCheckDate(thisObj) == false) { thisObj.val(""); } }); });
+</script>
+<script type="text/javascript">
+    const txtKeyMonth = $("#txtKeyMonth");
+    const selGubun = $("#selGubun");
+    const ctrlCostCenter = $("#ctrlCostCenter");
+    const selCompanyCode = $("#selCompanyCode");
+    const selBusinessUnit = $("#selBusinessUnit");
+    const btnSearch = $("#BtnSearch");
+    const btnBack = $("#BtnBack");
+    const btnExcelFirm = $("#BtnExcel_grid1");
+	const btnExcelDetail = $("#BtnExcel_grid2");
+    const btnMailBu = $("#BtnMail_grid2");
+    const btnMailConfig = $("#EBR_BU");
+    const tooltoparea = $(".tooltip-mailsend");
+    const btnMailOk = $("#BtnMailOk");
+    let currentFiscalYear = 0;
+    let mustInput = [];
+    let activeTabs = [];
+    const dic = {};
+    dic[0] = "Firm";
+    dic[1] = "Bu";
+    dic[2] = "Detail";
+    const heightMinus = "330";
+	let detailTargetAction = "EBReportSelectDetail";
+
+    const makeGridObj = (idx) => {
+        const gridObj = {
+            bubble: false,
+            columnTemplate: { align: 'center', hvalign: 'center', width: 100 },
+            numberCell: { show: false },
+            //editor: { type: 'textbox', style: 'border-radius:0px;border:0px;' },
+            //editModel: { clicksToEdit: 2 },
+            selectionModel: { type: 'cell', mode: 'block' },
+            height: $(window).height() - heightMinus,
+            title: "",
+            sortable: false,
+            resizable: true,
+            menuIcon: false,
+            scrollModel: { autoFit: false },
+            hoverMode: 'row',
+            rowHtHead: 20,
+            roundCorners: false,
+            rowBorders: true,
+            showTitle: false,
+            showHeader: true,
+            showTop: true, // Top 공개여부
+            showToolbar: true, // 툴바 공개여부, 툴바는 Top에 속해있음
+            showBottom: false,
+            stripeRows: false, // 짝수줄 강조
+            wrap: false,
+            headerMenu: false,
+            rowSpanHead: true,
+            collapsible: {
+                on: false
+            },
+            contextMenu: {
+			},
+            selectChange: function (event, ui) {
+            },
+            rowClick: function (event, ui) {
+            },
+            cellClick: function (event, ui) {
+            },
+            rowDblClick: function (event, ui) {
+            },
+            rowSelect: function (event, ui) {
+            },
+            open: function () {
+            },
+            headerCellClick: function (event, ui) {
+            },
+            change: function (event, ui) {
+            },
+            beforeTableView: function (event, ui) {
+            },
+            rowInit: function (ui) {
+            }
+		};
+
+		if (dic[idx].toUpperCase() === "FIRM") {
+			gridObj.freezeCols = 2;
+		}
+
+        return gridObj;
+	}
+
+
+	const setGroupModel = (gridObj, idx) => {
+		const toolbar = { items: [{ type: 'button', label: "Grouping", listener: function () { var on = this.option('groupModel.on'); this.Group().option({ on: !on }); } }] };
+		const gm = {
+			on: true,
+			collapsed: false, // 그루핑 된 컬럼이 자동으로 닫혀 있는 여부
+			merge: true,
+			//showSummary: true,
+			//summaryEdit: false,
+			//grandSummary: false,
+			title: [],
+		};
+
+		const setDefaultTitle = (groupModel) => {
+			for (const t in groupModel.dataIndx) groupModel.title.push("{0}");
+		}
+
+		if (dic[idx].toUpperCase() === "BU") {
+			gm.collapsed = [false];
+			gm.dataIndx = ['BU_NM', 'CC_NM']
+			setDefaultTitle(gm);
+			gridObj["groupModel"] = gm;
+			gridObj["toolbar"] = toolbar;
+		}
+	}
+
+	const makeColModel = (idx, data, buList) => {
+        const colModel = [];
+        // Default Settings 기본 설정
+		const styleSet1 = { "font-weight": "bolder" };
+		const styleSet2 = { "background-color": "#26890D", "color": "#FFFFFF", "font-weight": "bolder", "text-align": "center" };
+        const styleSet3 = { "background-color": "#86BC25", "color": "#FFFFFF", "font-weight": "bolder", "text-align": "center" };
+        const styleSet4 = { "background-color": "#D9E1F2", "font-weight": "bolder", "text-align": "center" };
+		const styleSet5 = { "background-color": "#DAF2D0", "text-align": "center" };//, "font-weight": "bolder" };
+		const styleSet6 = { "background-color": "#FAFAD2", "text-align": "center" };//, "font-weight": "bolder" };
+		const ds = { dataType: "string", align: "left", halign: "center", sortable: false, editor: false, editable: false };
+        const dsi = { dataType: "integer", sortable: false, halign: "center", align: "right", editor: false, editable: false, format: "#,##0" };
+
+        // Conditional Formatting
+		/*------------------------------------------------------------
+		// FIRM
+		------------------------------------------------------------*/
+		const setNumberFormat = (num, digits = 0) =>
+		{
+			const formatter = new Intl.NumberFormat('ko-KR', {
+				style: 'decimal',
+				minimumFractionDigits: digits,
+				maximumFractionDigits: digits
+			});
+			const formattedNumber = formatter.format(num);
+			return formattedNumber;
+		}
+
+		const isVaild = (i) => {
+			if (Common.IsEmpty(i) || isNaN(i)) return false;
+			else return true;
+		}
+        const getPercent = (b, a) => {
+            if (!isVaild(b)) return 'N/A';
+            else if (!isVaild(a)) return '0%';
+			return `${setNumberFormat(Math.round((a / b) * 100 * 10) / 10 , 1)}%`;
+		}
+
+		const getRest = (b, a) => {
+			if (!isVaild(b)) b = 0;
+			if (!isVaild(a)) a = 0;
+			return b - a;
+		}
+
+		const fiscalYear = Common.GetFiscalYear(txtKeyMonth.val());
+		const fy = fiscalYear.txt;
+		const fyLast = fiscalYear.txtPre;
+
+		if (dic[idx].toUpperCase() === "FIRM") {
+
+            // Row Style
+			if (!Common.IsEmpty(data)) {
+                for (const row of data) {
+					if (row.ROW_TYPE === 2)
+						row.pq_rowstyle = styleSet4;
+                }
+            }
+
+            colModel.push
+            (
+				{ ...ds, dataIndx: "ZSM_SEQ", title: "ZSM_SEQ", width: 140, hidden: true },
+				{ ...ds, dataIndx: "ZSM_NM", title: "항목", width: 200, halign: "center", styleHead: styleSet1 },
+			)
+
+			for (const bu of buList) {
+                colModel.push
+                (
+                    {
+						title: bu.BU_NM, align: "center", styleHead: styleSet1, colModel: [
+                            {
+								title: fyLast, align: "center", styleHead: styleSet2, colModel: [
+									{ ...dsi, dataIndx: `${bu.BU_CD}_AL`, title: "Actual", width: 140 },
+                                ]
+                            },
+							{
+								title: fy, align: "center", styleHead: styleSet3, colModel: [
+									{ ...dsi, dataIndx: `${bu.BU_CD}_B`, title: "Plan", width: 140 },
+									{ ...dsi, dataIndx: `${bu.BU_CD}_A`, title: "Actual", width: 140 },
+									{
+										...dsi,
+										dataIndx: `${bu.BU_CD}_REST`, title: "잔여예산", width: 140,
+										align: "right", halign: "center",
+										render: function (ui) {
+											var rowData = ui.rowData;
+											var result1 = getRest(rowData[`${bu.BU_CD}_B`], rowData[`${bu.BU_CD}_A`]);
+											const formattedNumber = setNumberFormat(result1);
+											return formattedNumber;
+										}
+									},
+									{
+										dataIndx: `${bu.BU_CD}_PERCENT`, title: "사용률", width: 140,
+                                        align: "right", halign: "center",
+										render: function (ui) {
+											var rowData = ui.rowData;
+											var result1 = getPercent(rowData[`${bu.BU_CD}_B`], rowData[`${bu.BU_CD}_A`]);
+											return result1;
+										}
+									},
+								]
+							},
+                        ]
+                    }
+                );
+            }
+
+        }
+		/*------------------------------------------------------------
+	    // BU
+	    ------------------------------------------------------------*/
+		else if (dic[idx].toUpperCase() === "BU") {
+
+			// Row Style
+			if (!Common.IsEmpty(data)) {
+				for (const row of data) {
+					if (row.ROW_TYPE === 3)
+						row.pq_rowstyle = styleSet5;
+					else if (row.ROW_TYPE === 2)
+						row.pq_rowstyle = styleSet6;
+				}
+			}
+
+            colModel.push(
+				{ ...ds, title: "", dataIndx: "BU_CD", hidden: true },
+				{ ...ds, title: "BU Name", dataIndx: "BU_NM", width: 140, styleHead: styleSet1 },
+				{ ...ds, title: "CC", dataIndx: "CC_CD", hidden: true },//, width: 140, styleHead: styleSet1 },
+				{ ...ds, title: "CC Name", dataIndx: "CC_NM", width: 140, styleHead: styleSet1 },
+				{ ...ds, title: "CC_LV2", dataIndx: "CC_LV2", hidden: true },
+				{ ...ds, title: "CC_LV2", dataIndx: "CC_LV2", hidden: true },
+				{ ...ds, title: "", dataIndx: "ZSM_SEQ", hidden: true },
+				{ ...ds, title: "항목", dataIndx: "ZSM_NM", width: 200 },
+                { ...dsi, title: `${fyLast} Actual`, dataIndx: "AL_TOTAL", width: 140, styleHead: styleSet2 },
+                {
+					title: `${fy} Actual`, align: "center", styleHead: styleSet3, colModel: [
+						{ ...dsi, title: "YTD Total", dataIndx: "A_TOTAL", width: 140, styleHead: styleSet3 },
+						{ ...dsi, title: "6월", dataIndx: "A_JUN", width: 140, styleHead: styleSet5 },
+						{ ...dsi, title: "7월", dataIndx: "A_JUL", width: 140, styleHead: styleSet5 },
+						{ ...dsi, title: "8월", dataIndx: "A_AUG", width: 140, styleHead: styleSet5 },
+						{ ...dsi, title: "9월", dataIndx: "A_SEP", width: 140, styleHead: styleSet5 },
+						{ ...dsi, title: "10월", dataIndx: "A_OCT", width: 140, styleHead: styleSet5 },
+						{ ...dsi, title: "11월", dataIndx: "A_NOV", width: 140, styleHead: styleSet5 },
+						{ ...dsi, title: "12월", dataIndx: "A_DEC", width: 140, styleHead: styleSet5 },
+						{ ...dsi, title: "1월", dataIndx: "A_JAN", width: 140, styleHead: styleSet5 },
+						{ ...dsi, title: "2월", dataIndx: "A_FEB", width: 140, styleHead: styleSet5 },
+						{ ...dsi, title: "3월", dataIndx: "A_MAR", width: 140, styleHead: styleSet5 },
+						{ ...dsi, title: "4월", dataIndx: "A_APR", width: 140, styleHead: styleSet5 },
+						{ ...dsi, title: "5월", dataIndx: "A_MAY", width: 140, styleHead: styleSet5 },
+                    ]
+                }
+
+            );
+        }
+        /*------------------------------------------------------------
+        // DETAIL
+        ------------------------------------------------------------*/
+		else if (dic[idx].toUpperCase() === "DETAIL") {
+            colModel.push(
+                /*{ ...ds, title: "", dataIndx: "CC_BU_CD" },*/
+				/*{ ...ds, title: "SEQ", dataIndx: "SEQ", width: 140, styleHead: styleSet5 },*/
+				{ ...ds, title: "Year", dataIndx: "YEAR", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "YearMonth", dataIndx: "YEAR_MONTH", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "", dataIndx: "BU_CD", width: 140, hidden: true },
+				{ ...ds, title: "Business Unit", dataIndx: "BU_NM", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "Cost Center", dataIndx: "CC_CD", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "Cost Center Desc.", dataIndx: "CC_NM", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "Engagement(Lv2)", dataIndx: "ENG_LV2", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "Engagement", dataIndx: "ENG_LV4", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "Engagement Name", dataIndx: "ENG_NM", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "Partner No", dataIndx: "PTR_NO", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "Partner Name", dataIndx: "PTR_NM", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "Manager No", dataIndx: "MGR_NO", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "Manager Name", dataIndx: "MGR_NM", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "사용자 사번", dataIndx: "EMP_NO", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "사용자 명", dataIndx: "EMP_NM", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "예산 항목 구분", dataIndx: "ZSM", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "G/L", dataIndx: "GL_CD", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "Description", dataIndx: "GL_NM", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "Exp. Type", dataIndx: "EXP_TYPE", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "Exp. Attribute", dataIndx: "EXP_ATTR", width: 140, styleHead: styleSet5 },
+				{ ...ds, title: "Text", dataIndx: "TEXT", width: 140, styleHead: styleSet5 },
+				{ ...dsi, title: "Expenses Current", dataIndx: "EXP_CURR", width: 140, styleHead: styleSet5 },
+            );
+        }
+        return colModel;
+    }
+
+    // 데이터 조회
+    const getGridData = (idx, init) =>
+	{
+		const data = {}
+		data.mainDataRows = [];
+		data.buList = [];
+
+        // Detail Paging 때문에
+        if (init === 'undefined' && init == true && idx === 2) {
+            $("#page_idx").val(1);
+        }
+
+		$("#selType").val(dic[idx]);
+        const reqInfo = new Common.RequestInfo();
+        reqInfo.formData = new FormData();
+        reqInfo.AddParameter($("#SearchArea"));
+
+        Common.Ajax(`/Sap_PnAExpenseReport/EBReportSelect`, reqInfo, function (rtn) {
+            const dataDs = Common.DataSet.StringToDataSet(rtn);
+            data.mainDataRows = dataDs.Tables[0].Rows;
+            // 0(FIRM) 인경우 두번째 테이블의 BuList를 가져옴
+            if (idx === 0) {
+                data.buList = dataDs.Tables[1].Rows;
+            }
+        }, {
+            okErr: function (result) {
+                Common.Loading.Hide();
+                Common.CheckErrorMsg(result);
+            }
+        });
+
+		return data;
+    }
+
+    // 조회 전체 로직
+    const doSearch = () => {
+        /*
+        Key Month 는 현재일자의 년도월 기본값으로 표시 예)현재일자 2024.06.01이면 22406
+        권한에 따라 BU 값과, Parnter name, 구분이 설정됨
+        - 관리자(재경부, OCFO):  BU, Parnter, 구분 제한 없음, 모두 선택 가능
+        - BU Admin: BU 에 소속 BU 값으로 입력되고 비활성, 구분에 BU, Parnter 선택 가능(기본값 BU)
+        - 그외: Partner Name 에 본인 정보 입력되고 비활성, 구분에 Parnter 기본값 비활성
+        * 구분 조건에 따라 검색조건 입력 여부가 결정
+        - 구분에 FIRM 을 선택하면 Company Code, CostCenter, Business Unit, Parnter Name 이 모두 Clear 되고, 비활성
+        - 구분에 BU를 선택하면  Business Unit 선택 필수, Parnter Name 이 Clear 되고 비활성
+
+        */
+
+        Common.Loading.Show();
+
+        setTimeout(() => {
+            btnSearch.addClass("hidden");
+            $("#SearchArea").addClass("hidden");
+            /*$("#SearchText").addClass("hidden");*/
+            //$("#ReportArea").removeClass("hidden");
+            $("#BtnBack").removeClass("hidden");
+            $("#ListArea").removeClass("hidden");
+			btnExcelFirm.removeClass("hidden");
+			btnExcelDetail.removeClass("hidden");
+
+            const getTextByCtrl = (ctrl) => {
+                let txt = "";
+                txt += ctrl.attr("title") + ": ";
+                if (ctrl.prop("tagName") === "SELECT") {
+                    txt += ctrl.find("option:checked").text();
+                }
+                else {
+                    txt += ctrl.val();
+                }
+                txt += "<br>";
+                return txt;
+            }
+            const gubunValue = $("#selGubun").val();
+            let searchText = "";
+            searchText += getTextByCtrl(txtKeyMonth);
+
+			fiscalYear = Common.GetFiscalYear(txtKeyMonth.val());
+
+			currentFiscalYear = fiscalYear.fiscalYear;
+			searchText += `YTD: ${Common.GetDateString(fiscalYear.startDate, "yyyy-MM")} ~ ${Common.GetDateString(fiscalYear.endDate, "yyyy-MM")}<br>`
+            searchText += getTextByCtrl(selGubun);
+            activeTabs = [];
+            // 테스트용
+            //activeTabs.push(2);
+
+            switch (gubunValue) {
+                case "F": activeTabs.push(0, 1, 2); break;
+                case "B":
+                    activeTabs.push(1, 2);
+                    searchText += getTextByCtrl(selBusinessUnit);
+                    searchText += getTextByCtrl(ctrlCostCenter);
+                    break;
+                default: break;
+            }
+
+            $("#lbl_SearchText").html(searchText);
+            // 탭 노출 여부
+            for (let li of $(".litab")) { li = $(li); const idx = Number(li.attr("idx")); if (activeTabs.includes(idx)) li.removeClass("hidden"); else li.addClass("hidden"); }
+
+            let isFirst = true;
+            for (const tabindex of activeTabs)
+            {
+                try {
+
+                    if (isFirst) {
+                        isFirst = false;
+                        $("#tabs").tabs('option', 'active', tabindex);
+                        initTab(tabindex);
+                    }
+                    const tab = $(`#tabs-${tabindex}`);
+                    if (tab.attr("Create") === undefined)
+                    {
+						tab.attr("Create", "Y");
+						const gridObj = getGridObj(tabindex);
+                        const id = "#" + tab.find(".ReportArea").attr("id");
+						const grid = $(`${id}`).pqGrid(gridObj);
+						//grid.refresh();
+
+
+                    } // if (tab.attr("Create") === undefined)
+                } catch (e) {
+                    console.log(`e: ${e}`);
+                }
+
+            }
+
+            Common.Loading.Hide();
+        }, 500);
+    }
+    const doBack = () => {
+        Common.Loading.Show();
+        location.reload();
+
+
+        //btnSearch.removeClass("hidden");
+        //$("#SearchArea").removeClass("hidden");
+        //$("#ReportArea").addClass("hidden");
+        //$("#BtnBack").addClass("hidden");
+        //$("#ListArea").addClass("hidden");
+        //btnExcelFirm.addClass("hidden");
+
+        /*const tabs = $('.divtab');*/
+        /*for (const tab of tabs) {*/
+        /*    $(tab).attr("Create", null);*/
+        /*}*/
+    }
+
+    const cancelKeydown = function (e)
+    {
+
+    }
+
+    const bindBU = () =>
+    {
+        // 검색용 BU 콤보 박스: 데이터 비우기
+        $("#selBusinessUnit option:not(:first)").remove();
+        // 메일 전송용 BU 리스트: 데이터 비우기
+		$(".ulTooltip-mailsend li").remove();
+
+        const buList = $("#hdnBuList").val();
+        const dataTable = Common.DataSet.StringToDataTable(buList);
+
+		const fiscalYear = Common.GetFiscalYear(txtKeyMonth.val());
+		let targetFlag = "Y";
+		if (fiscalYear.fiscalYear < 2025) targetFlag = "Y"; else targetFlag = "N";
+
+		for (const row of dataTable.Rows) {
+
+			if (row.FY24_BELOW !== targetFlag) continue;
+
+            // 검색용 BU 콤보 박스
+			var newOption = $("<option></option>")
+				.val(row.CostCenterFunction)
+				.text(row.CostCenterFunctionName);
+			// select 요소에 추가
+            $("#selBusinessUnit").append(newOption);
+
+            // 메일 전송용 BU 리스트
+			var newLi = $("<li></li>")
+				.append($("<input></input>")
+					.attr({
+						type: "checkbox",
+						class: "chkMailTaget",
+						style: "margin-right:5px;",
+						value: row.CostCenterFunction
+					}))
+                .append($("<label></label>").text(row.CostCenterFunctionName)); // 여기에 원하는 텍스트를 할당
+
+			$(".ulTooltip-mailsend").append(newLi);
+
+        }
+    }
+
+    const initPage = () => {
+        // 날짜 초기화
+        const now = new Date();
+		now.setMonth(now.getMonth() - 1);
+
+        const month = '00' + (now.getMonth() + 1).toString(); // 0부터 시작하기 때문에 1을 더합니다.
+		txtKeyMonth.val(`${now.getFullYear()}-${month.substr(month.length - 2, 2)}`);
+
+        $("#tabs").tabs({
+            activate: function (event, ui) {
+                var selectedTab = $("#tabs").tabs('option', 'active'); // 선택된 tab의 index value
+                initTab(selectedTab);
+                if ($(`#ra${selectedTab}`).pqGrid('instance') !== undefined) {
+                    $(`#ra${selectedTab}`).pqGrid('instance').iContext.model.on = true;
+                    $(`#ra${selectedTab}`).pqGrid("refreshView");
+                }
+            }
+        });
+
+        //doSearch();
+        initSearchArea(selGubun.val());
+
+        bindBU();
+    }
+
+	txtKeyMonth.bind("change", function (e) {
+		const now_val = txtKeyMonth.val();
+		if (!now_val) return;
+
+		const before = $("#txtKeyMonth_before");
+		const before_val = before.val();
+		const fy_selected = Common.GetFiscalYear(txtKeyMonth.val());
+
+		// 입력값이 날짜형식이 아닌경우
+		if (!fy_selected.fiscalYear) {
+			console.log("err: 날짜아님");
+			return;
+		}
+
+		if (before_val === now_val) {
+			console.log("err: 날짜 동일");
+			return;
+		}
+
+		if (fy_selected.fiscalYear < 2024) {
+			console.log("err: 2024 이전");
+			txtKeyMonth.val('2024-06');
+			return;
+		}
+		// fy 비교를 위해 fy 계산
+		const fy_before = Common.GetFiscalYear(before_val);
+		// 변경된 날짜 저장
+		before.val(now_val);
+		// 입력값이 날짜형식이 아닌경우
+		if (!fy_before.fiscalYear) {
+			console.log("err: (before)날짜아님");
+			return;
+		}
+		// fy 미변경
+		if (fy_before.fiscalYear === fy_selected.fiscalYear) {
+			console.log("날짜 변경 안됨");
+			return;
+		}
+		// Bu List 변경
+		bindBU();
+		// Cost Center 다시 불러오기
+		setCostCenterCtrl();
+    });
+
+	function Help() {
+
+		Custom.Dialog({
+			url: '/Sap_PnAExpenseReport/Help'
+			//, blockClose: false
+			//, param: { mode: 'ADD' }
+		});
+
+	}
+
+    const initTab = (idx) => {
+
+    }
+
+
+	const setSelectDisable = (id) => {
+		const selectElement = document.getElementById(id);
+		selectElement.style.backgroundColor = '#eee';
+		selectElement.style.cursor = 'not-allowed';
+		selectElement.style.pointerEvents = 'none';
+	}
+
+    const getbucd = () => {
+		const fiscalYear = Common.GetFiscalYear(txtKeyMonth.val());
+		let bucd = "@ViewBag.BU_CD";
+		if (2024 < fiscalYear.fiscalYear && "@ViewBag.BU_CD_FY25" != "") bucd = "@ViewBag.BU_CD_FY25";
+		return bucd;
+	}
+
+    const initSearchArea = (val) => {
+        if (val == "F") {
+            // 구분에 FIRM 을 선택하면 Company Code, CostCenter, Business Unit, Parnter Name 이 모두 Clear 되고, 비활성
+            ctrlCostCenter.val("");
+            ctrlCostCenter.attr("disabled", true);
+            selCompanyCode.val("");
+            selCompanyCode.attr("disabled", true);
+			mustInput = [];
+
+			if ("@AuthLevel" === "ADMIN") {
+				selBusinessUnit.val("");
+                selBusinessUnit.attr("disabled", false);
+			}
+        }
+        else if (val == "B") {
+            // 구분에 BU를 선택하면  Business Unit 선택 필수, Parnter Name 이 Clear 되고 비활성
+            mustInput.push(selBusinessUnit);
+            ctrlCostCenter.attr("disabled", false);
+            selCompanyCode.attr("disabled", false);
+
+			if ("@AuthLevel" === "ADMIN") {
+				selBusinessUnit.attr("disabled", false);
+			}
+        }
+        else {
+            ctrlCostCenter.attr("disabled", false);
+            selCompanyCode.attr("disabled", false);
+			mustInput = [];
+
+			if ("@AuthLevel" === "ADMIN") {
+				selBusinessUnit.attr("disabled", false);
+			}
+        }
+	}
+
+	// 엑셀 다운로드 ADMIN V
+	$("#BtnExcel_grid1").bind("click", function () {
+		Common.Msg("엑셀 다운로드 실행하시겠습니까?", {
+			mode: "confrim"
+			, okback: function () {
+
+				Common.Loading.Show();
+				var date = Common.GetTodayTimeString();
+				// activeTabs;
+				setTimeout(function () {
+					const wList = [];
+					// Workbook Default Setting
+					const wds = { workbook: true, render: true, noheader: false };
+					let w = null;
+					for (const activeTab of activeTabs) {
+
+						if (dic[activeTab].toUpperCase() === "DETAIL") continue;
+
+						const gird = $(`#ra${activeTab}`).pqGrid("instance");
+						if (w == null) {
+							w = gird.exportExcel({ workbook: true, sheetName: dic[activeTab], render: true, noheader: false });
+						}
+						else {
+							const wTemp = gird.exportExcel({ workbook: true, sheetName: dic[activeTab], render: true, noheader: false });
+							w.sheets.push(wTemp.sheets[0]);
+						}
+					}
+					var blob = pq.excel.exportWb({ workbook: w, type: 'blob' });
+					saveAs(blob, "PnA_Expense_Budget_Report_" + date + ".xlsx");
+					Common.Loading.Hide();
+				}, 500);
+
+			}
+		});
+	});
+
+	// 엑셀 다운로드 CSV
+	$("#BtnExcel_grid2").bind("click", function () {
+		var diaObj = $("#SearchArea");
+		Common.Msg("엑셀(CSV) 다운로드 실행하시겠습니까?", {
+			mode: "confrim"
+			, okback: function () {
+
+				Common.Loading.Show();
+				setTimeout(function () {
+					var ReqInfo = new Common.RequestInfo();
+					ReqInfo.AddParameter(diaObj);
+					Common.Ajax("/Sap_PnAExpenseReport/EBReportSelectDetail_Excel", ReqInfo, function (data) {
+						Common.Loading.Hide();
+						window.location.href = data;
+					}, {
+						okErr: function (result) {
+							Common.Loading.Hide();
+							Common.CheckErrorMsg(result);
+							//ListBack();
+						}
+					});
+
+				}, 500);
+
+			}
+		});
+	});
+
+	// get GridObj
+	const getGridObj = (tabindex) => {
+
+		const gridObj = makeGridObj(tabindex);
+		let buList = [];
+
+		if (dic[tabindex].toUpperCase() === "DETAIL") {
+
+			const reqInfo = new Common.RequestInfo();
+			reqInfo.AddParameter($("#SearchArea"));
+			const _postData = {}
+			for (const pm of reqInfo.Parameters) {
+				_postData[pm.Key] = pm.Value;
+			}
+
+			gridObj.dataModel = {
+				location: "remote", //grid gets data from remote source.
+				dataType: "JSON",
+				method: "POST",
+				url: "/Sap_PnAExpenseReport/EBReportSelectDetail",
+				postData: _postData
+			}
+
+			gridObj.pageModel = {
+				format: "#,###",
+				type: "remote", //this sets up remote paging.
+				rPP: 50,
+				//rPP: -1,
+				strRpp: "{0}"
+			}
+		}
+		else {
+
+			const data = getGridData(tabindex);
+			gridObj.dataModel = { data: data.mainDataRows };
+			buList = data.buList;
+		}
+		gridObj.colModel = makeColModel(tabindex, gridObj.dataModel.data, buList);
+
+		if (!Common.IsEmpty(gridObj.dataModel.data)) {
+			setGroupModel(gridObj, tabindex);
+		}
+
+		return gridObj;
+
+	}
+
+    selGubun.bind("change", function () { initSearchArea($(this).val()); });
+    btnSearch.bind("click", doSearch);
+    $("#BtnBack").bind("click", doBack);
+	$(document).ready(initPage);
+</script>
+
+@if (new string[] { "BU_ADMIN", "BL_ADMIN", "ADMIN" }.Contains(AuthLevel))
+{
+	<script>
+
+		const txtKeyMonth_changed = () => {}
+		const setCostCenterCtrl = () => {
+			const fiscalYear = Common.GetFiscalYear(txtKeyMonth.val());
+			Common.Loading.Show();
+			const select = $("#ctrlCostCenter");
+			try {
+				select.pqSelect("destroy");
+				console.log("fpqSelect.destroy")
+			} catch (e) { }
+
+			const data = {}
+			const reqInfo = new Common.RequestInfo();
+			reqInfo.formData = new FormData();
+			reqInfo.AddParameter("FiscalYear", fiscalYear.fiscalYear);
+
+			Common.Ajax(`@SelectCostCenterUrl`, reqInfo, function (rtn) {
+				//
+				const dataDs = Common.DataSet.StringToDataSet(rtn);
+				const rows = dataDs.Tables.OUT_PUT.Rows;
+				if (rows.length) {
+					// select 요소를 선택
+					select.empty();
+
+					// 배열의 각 요소를 순회하며 option 태그를 생성하여 append
+					$.each(rows, function (index, row) {
+						select.append($("<option></option>").attr("value", row.COSTCENTER).text(row.COSTCENTER_NM));
+					});
+
+					// 체크박스와, 멀티셀렉트의 선택 갯수가 동기화 되지 않는 오류가 있음
+					// 추가 개발이 필요함
+					$("#ctrlCostCenter").pqSelect({
+						multiplePlaceholder: 'Select Cost Center',
+						checkbox: true //adds checkbox to options
+						, displayText: "{0}개 선택됨"
+						//, selectallText: '전체선택'
+						, maxSelect: 10
+						, maxSelectReach: function (event, ui) {
+							// alert("야호")
+						}
+					}).on("change", function (evt) {
+						//var val = $(this).val();
+						//$("#ctrlCostCenter_option1")
+						//	.text("선택: " + val);
+					}); //.pqSelect('open');
+					console.log("fpqSelect.bind")
+				}
+
+				Common.Loading.Hide();
+
+			}, {
+				okErr: function (result) {
+					Common.Loading.Hide();
+					//Common.CheckErrorMsg(result);
+				}
+			});
+		}
+
+		$(document).ready(() => {
+			setCostCenterCtrl();
+		});
+	</script>
+	if (AuthLevel == "ADMIN")
+	{
+		<script>
+			const openCode = function (_m) {
+				Common.Loading.Show();
+				Custom.Dialog({ url: '/Sap_PnAExpenseReport/CostCenterAuth', param: { m: _m } });
+				//alert(this.target);
+			}
+
+			$(document).ready(() => {
+				$("#BtnCode1").bind("click", () => openCode("C"));
+			});
+		</script>
+	}
+	else if (new string[] { "BU_ADMIN" }.Contains(AuthLevel))
+	{
+		<script>
+
+			$(document).ready(() => {
+				selBusinessUnit.val(getbucd());
+				setSelectDisable('selBusinessUnit');
+			});
+		</script>
+	}
+	else if (new string[] { "BL_ADMIN" }.Contains(AuthLevel))
+	{
+		<script>
+
+			$(document).ready(() => {
+				selBusinessUnit.val(getbucd());
+				setSelectDisable('selBusinessUnit');
+				setSelectDisable('selCompanyCode');
+
+			});
+		</script>
+	}
+
+}
+else if (new string[] { "BU_HEAD" }.Contains(AuthLevel))
+{
+	<script>
+
+		const txtKeyMonth_changed = () => { }
+		const setCostCenterCtrl = () => { }
+		setSelectDisable('selGubun');
+		setSelectDisable('selBusinessUnit');
+		setSelectDisable('selCompanyCode');
+
+		$("#ctrlCostCenter").pqSelect({
+			multiplePlaceholder: 'Select Cost Center',
+			checkbox: true //adds checkbox to options
+			, displayText: "{ 1 } selected"
+			, selectallText: '전체선택'
+		}).on("change", function (evt) {
+			//var val = $(this).val();
+			//$("#ctrlCostCenter_option1")
+			//	.text("선택: " + val);
+		}); //.pqSelect('open');
+
+
+	</script>
+}

@@ -1,0 +1,300 @@
+﻿@using System.Data;
+@using WebUtil;
+@using Interlock.Helpers;
+@{
+	Layout = null;
+	//ViewBag.ControllerName = "Invoices";
+
+	//Util util = ViewBag.util;
+	//DataSet ds = ViewBag.ds;
+}
+<div id="SearchArea_M" class="hidden">
+	<input type="hidden" name="csrf_token" value="@ViewBag.csrf_token">
+</div>
+<style>
+	textarea, .div-textarea {
+		width: 100%;
+		height: 200px;
+		resize: none;
+		padding: 5px;
+	}
+
+	.w100p {
+		width: 100%
+	}
+
+	input[type="file"] {
+		display: inline;
+	}
+
+	.xcontainer {
+		width: 100%;
+		display: table;
+	}
+
+		.xcontainer div {
+			/*display: inline-block;*/
+		}
+
+	.xth {
+		background-color: #f5f5f5;
+		font-weight: bold;
+		width: 13%;
+	}
+
+	.xtd {
+		background-color: white;
+	}
+
+	.xth, .xtd {
+		padding: 8px;
+		box-sizing: border-box;
+		border: 1px solid #e7e7e7;
+		display: table-cell;
+	}
+
+	.b-l-0 {
+		border-left: 0 !important;
+	}
+
+	.div-nofile .fileinput {
+		margin-bottom: 0;
+	}
+
+	.gtong {
+		padding: 5px 7px 5px 7px !important;
+		font-size: 14px !important;
+	}
+
+	.valign-m {
+		vertical-align: middle;
+		align-content: center;
+	}
+</style>
+<div class="modal-dialog modal-xl hidden">
+	<div class="modal-content">
+		<div class="modal-header">
+			<button type="button" class="close" data-bs-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+			@if (ViewBag.GroupCode == "PTR_EXPENSE_BUDGET_EXCEPT")
+			{
+			<h4 class="modal-title">[팝업] WBS 제외</h4>
+			}
+			else if (ViewBag.GroupCode == "PTR_EXPENSE_BUDGET_EXCEPT_CC")
+			{
+			<h4 class="modal-title">[팝업] WBS 특정 CC로 변경</h4>
+			}
+		</div>
+		<div class="modal-body">
+			<div class="table-responsive">
+				<table class="table table-bordered bg-white m-b-xxs">
+					<tr>
+						<th class="active text-right fw-150 valign-m"><span class="gtong">그룹코드</span></th>
+						<td><span class="gtong" id="GroupCode">@ViewBag.GroupCode</span></td>
+					</tr>
+					<tr>
+						<th class="active text-right fw-150 valign-m"><span class="gtong">그룹코드명</span></th>
+						<td><span class="gtong" id="GroupCodeName"></span></td>
+					</tr>
+				</table>
+				<div class="m-t-md" style="text-align:right">
+					<button type="button" class="btn btn-xs btn-success" style="margin-bottom:0px;">추가</button>
+				</div>
+				<table class="table table-hover table-striped table-bordered bg-white m-t-xs m-b-xxs">
+					<thead>
+						<tr>
+							<th class="active text-center">WBS CODE</th>
+							<th class="active text-center">WBS 명</th>
+							<th class="active text-center">시작일</th>
+							<th class="active text-center">종료일</th>
+							<th class="active text-center">옵션1</th>
+							<th class="active text-center">비고</th>
+							<th class="active text-center">사용여부</th>
+							<th class="active text-center">기능</th>
+						</tr>
+					</thead>
+					<tbody id="tbodyList">
+						<tr>
+							<td colspan="8">조회중...</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<div class="modal-footer">
+
+		</div>
+	</div>
+</div>
+<script>
+
+	function ListSearchPop(loading) {
+
+		if (typeof loading === "boolean" && loading === true)
+		Common.Loading.Show();
+
+		// setTimeout 이유 = Common.Ajax 와 한번에 실행하면 최종 렌더링시에 보여짐
+		setTimeout(() => {
+
+			// 파라미터 구성
+			const reqInfo = new Common.RequestInfo();
+			reqInfo.AddParameter("csrf_token", $(`[name="csrf_token"]`).val());
+			// GroupCode
+			reqInfo.AddParameter("GroupCode", $("#GroupCode").text());
+
+			var datas = [];
+			Common.Ajax(`/Sap_PartnerExpenseReport/WBSExcept_GetData`, reqInfo, function (rtn) {
+
+				const dataDs = Common.DataSet.StringToDataSet(rtn);
+
+				const TitleTable = dataDs.Tables[1];
+
+				if (typeof TitleTable !== "undefined" && 0 < TitleTable.Rows.Count) {
+
+					$("#GroupCodeName").text(TitleTable.Rows[0]["GROUP_CODE_NAME"]);
+
+				}
+
+
+				const MainTable = dataDs.Tables[0];
+
+				if (typeof MainTable !== "undefined" && 0 < MainTable.Rows.Count) {
+					// tbodyList
+					const tbodyList = document.querySelector("#tbodyList");
+					tbodyList.innerHTML = "";
+					for (let i = 0; i < MainTable.Rows.Count; i++) {
+
+
+						const tr = document.createElement("tr");
+						const newtd = (tr, value) => { const td = document.createElement("td"); td.textContent = value; tr.appendChild(td); }
+						newtd(tr, MainTable.Rows[i]["CODE"]);
+						newtd(tr, MainTable.Rows[i]["CODE_NAME"]);
+						newtd(tr, MainTable.Rows[i]["STA_YMD"]);
+						newtd(tr, MainTable.Rows[i]["END_YMD"]);
+						newtd(tr, MainTable.Rows[i]["OPTION1"]);
+						newtd(tr, MainTable.Rows[i]["BIGO"]);
+						newtd(tr, MainTable.Rows[i]["USE_YN"]);
+
+						const td = document.createElement("td");
+						const newbtn = (td, type, value) => {
+							const btn = document.createElement("btn");
+							const fp = "btn-";
+							let btntype = "";
+							let text = "";
+							if (type === "U") {
+								btntype = fp + "warning";
+								text = "수정";
+							}
+							else if (type === "D") {
+								btntype = fp + "danger";
+								text = "삭제";
+							}
+							else return;
+							btn.setAttribute("type", "button")
+							btn.style.marginBottom = "0px"
+							btn.classList.add("btn", "btn-xs", btntype);
+							btn.textContent = text;
+							btn.setAttribute("value", value);
+							td.appendChild(btn);
+						}
+						const seq = MainTable.Rows[i]["CODE_SEQ"];
+						newbtn(td, "U", seq);
+						newbtn(td, "D", seq);
+						tr.appendChild(td);
+						tbodyList.appendChild(tr);
+					}
+				}
+
+
+				//datas = dataDs.Tables[1].Rows;
+			}, {
+				okErr: function (result) {
+					Common.CheckErrorMsg(result);
+				}
+			});
+			$(".modal-dialog").removeClass("hidden");
+			Common.Loading.Hide();
+		}, 1);
+	}
+
+
+
+	var AddCode = function () {
+		Common.Loading.Show();
+		Custom.Dialog({
+			url: '/User/CodePost'
+			, blockClose: false
+			, param: { mode: 'ADD', code: "@ViewBag.GroupCode" }
+		});
+	}
+
+	var EditCode = (CODE_SEQ) => {
+		Common.Loading.Show();
+		Custom.Dialog({
+			url: '/User/CodePost'
+			, blockClose: false
+			, param: { mode: 'EDT', CODE_SEQ: CODE_SEQ, code: "@ViewBag.GroupCode" }
+		});
+	}
+
+	var DelCode = function (CODE_SEQ) {		
+        Common.Msg("삭제하시겠습니까?", {
+            mode: "confrim"
+			, okback: function () {
+				Common.Loading.Show();
+                var ReqInfo = new Common.RequestInfo();
+                ReqInfo.AddParameter("CODE_SEQ", CODE_SEQ)
+                ReqInfo.AddParameter("csrf_token", "@ViewBag.csrf_token")
+
+                Common.Ajax("/User/CodeDel", ReqInfo, function (rtn) {
+                    // 리스트 갱신하기
+					ListSearchPop();
+                });
+            }
+        });
+    }
+
+	var SaveCodePost = function () {
+
+		$("#GROUP_CODE").attr("disabled", false);
+
+		var diaObj = $("#User_SiteSetting_CodePost").parent();
+
+		// 저장
+		Custom.Exec({
+			obj: $("#User_SiteSetting_CodePost")
+			, url: "/User/CodePostProcess"
+			, resultMessage: true
+			, callback: function (rr) {
+				// 다이얼로그 닫기
+				diaObj.modal('hide');
+
+				// 리스트 갱신하기
+				ListSearchPop();
+			}
+		})
+	}
+
+
+	$(".table-responsive").bind("click", function(e) {
+		if (e.target.getAttribute("type") !== "button") return;
+		var v = e.target.getAttribute("value");
+
+		if (e.target.classList.contains("btn-warning")) {
+			EditCode(v);
+		}
+		else if (e.target.classList.contains("btn-danger")) {
+			DelCode(v);
+		}
+		else if (e.target.classList.contains("btn-success")) {
+			AddCode();
+		}
+
+	});
+
+	$(document).ready(() => {
+
+		ListSearchPop();
+
+	});
+
+</script>
